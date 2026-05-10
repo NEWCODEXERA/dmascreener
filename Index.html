@@ -476,7 +476,7 @@ function renderTable() {
             <td><span class="badge ${r.car.includes('BUY')?'BUY':(r.car.includes('SHORT')?'SHORT':'HOLD')}">${r.car}</span></td>
             <td>
               <div class="action-links">
-                <a href="https://www.tradingview.com/chart/?symbol=NSE%3A${encodeURIComponent(r.symbol)}" target="_blank" class="tv-link">TradingView</a>
+                <a href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent(r.symbol)}" target="_blank" class="tv-link">TradingView</a>
                 <a href="https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(r.symbol)}" target="_blank" class="tv-link" style="border-color:var(--border); color:var(--muted);">NSE</a>
               </div>
             </td>
