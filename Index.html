@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -263,41 +264,43 @@
       </div>
 
       <div class="theory-section">
-        <h2>1. The 200-DMA Principle</h2>
+        <h2>1. The Winning Theory Core</h2>
         <p>
-          The 200-Day Moving Average is the "Gold Standard" of long-term trend analysis. Mahesh Kaushik's winning theory suggests that price action oscillates around this mean. Buying fundamentally strong stocks when they trade below their 200-DMA offers a significant safety margin.
+          Mahesh Chander Kaushik's Winning Theory is built on the foundation of <strong>Long-term Value Reversion</strong>. The strategy identifies that fundamentally sound companies with consistent historical performance (high CAR) eventually revert to their mean value after periods of correction.
         </p>
-        <div class="calc-box">
-          <h4>Distance Calculation</h4>
-          <code>Distance % = ((CMP - 200-DMA) / 200-DMA) * 100</code>
-          <p style="font-size:0.7rem; opacity:0.7; margin-top:10px;">Negative percentage indicates an "Oversold" or "Value" zone.</p>
-        </div>
-      </div>
-
-      <div class="theory-section">
-        <h2>2. CAR (Compounded Annual Return)</h2>
         <p>
-          The CAR Signal rating is a proprietary quality metric. It evaluates the stock's historical consistency in delivering returns. A high CAR rating suggests that even if the stock is currently underperforming (below 200-DMA), its business model is robust enough to revert to its historical growth path.
+          The 200-Day Moving Average serves as the "True North" for a stock's price. When a stock trades significantly below this average, it enters a high-probability "Buy Zone" where the risk-to-reward ratio is most favorable for investors.
         </p>
       </div>
 
       <div class="theory-section">
-        <h2>3. Signal Logic Table</h2>
+        <h2>2. Understanding CAR & DMA Distance</h2>
         <div class="theory-grid">
-          <div class="calc-box" style="border-color: var(--accent)">
-            <h4>Buy Signal</h4>
-            <p>Triggered when Price < 200-DMA and CAR suggests historical outperformance. This is the optimal entry point.</p>
+          <div class="calc-box">
+            <h4>200-DMA Distance %</h4>
+            <code>((CMP - 200DMA) / 200DMA) * 100</code>
+            <p style="font-size:0.7rem; opacity:0.7; margin-top:10px;">Identifies how "expensive" or "cheap" a stock is relative to its yearly average.</p>
           </div>
-          <div class="calc-box" style="border-color: var(--red)">
-            <h4>Short/Sell Signal</h4>
-            <p>Triggered when Price is significantly stretched above 200-DMA, indicating potential over-valuation and exhaustion.</p>
+          <div class="calc-box" style="border-color: var(--accent2)">
+            <h4>CAR Rating</h4>
+            <p>Compounded Annual Return. It represents the historical compounding power of the stock. High CAR indicates business resilience.</p>
           </div>
         </div>
       </div>
 
       <div class="theory-section">
-        <h2>4. Source Materials</h2>
-        <p>Learn directly from Mahesh Kaushik's winning theory through these primary video resources:</p>
+        <h2>3. Signal Interpretations</h2>
+        <p>The screener classifies signals based on the confluence of the current price relative to the 200-DMA:</p>
+        <ul style="padding-left: 20px; color: var(--text); opacity: 0.9;">
+          <li><strong>BUY:</strong> Price is below the 200-DMA (Negative Distance). Historically, these are periods of maximum accumulation potential.</li>
+          <li><strong>HOLD:</strong> Price is oscillating near the 200-DMA. The trend is consolidating.</li>
+          <li><strong>SHORT/AVOID:</strong> Price is significantly stretched above the 200-DMA (High Positive Distance), suggesting the stock may be over-extended and due for a pullback.</li>
+        </ul>
+      </div>
+
+      <div class="theory-section">
+        <h2>4. Educational Source Materials</h2>
+        <p>Detailed explanations of the DMA and CAR Winning Theory can be found in Mahesh Kaushik's research videos:</p>
         <div class="video-links">
           <a href="https://share.google/keBCKxw0edLZgPACq" target="_blank" class="video-card">
             <div class="video-icon">▶</div>
@@ -319,10 +322,10 @@
   </div>
 
   <footer>
-    <div style="margin-bottom: 10px;">
-      Master Data Source: <a href="https://docs.google.com/spreadsheets/d/1FIjImSXGQjde2Zq3KZNTnlRPuvREHAfkxojXhFOX56Q/edit" target="_blank" class="source-link">View Google Sheet</a>
+    <div style="margin-bottom: 12px;">
+      Master Data Source: <a href="https://docs.google.com/spreadsheets/d/1FIjImSXGQjde2Zq3KZNTnlRPuvREHAfkxojXhFOX56Q/edit" target="_blank" class="source-link">Google Sheet Link</a>
     </div>
-    <div>&copy; 2025 DMA Screener • Mahesh Chander Kaushik Theory</div>
+    <div>&copy; 2025 DMA Screener • Mahesh Chander Kaushik Winning Theory (INH 100000908)</div>
   </footer>
 </main>
 
@@ -367,10 +370,10 @@ async function loadData() {
     });
 
     processData(headers);
-    showToast('Market data synchronized');
+    showToast('Live data synced');
   } catch(e) {
     console.error(e);
-    showToast('Failed to load data');
+    showToast('Connection failed');
   } finally {
     btn.disabled = false; btn.textContent = 'Refresh';
   }
@@ -427,7 +430,7 @@ function renderTable() {
 
   const container = document.getElementById('table-container');
   if (!filtered.length) { 
-    container.innerHTML = '<div class="state-center"><p>No stocks found matching filters</p></div>'; 
+    container.innerHTML = '<div class="state-center"><p>No stocks matching current filters</p></div>'; 
     return; 
   }
 
@@ -438,75 +441,5 @@ function renderTable() {
           <th onclick="setSort('symbol')">Scrip ${getArrow('symbol')}</th>
           <th onclick="setSort('cmp')">CMP ${getArrow('cmp')}</th>
           <th onclick="setSort('diff200')">Diff 200 DMA ${getArrow('diff200')}</th>
-          <th onclick="setSort('car')">CAR Signal ${getArrow('car')}</th>
-          <th>Charts / Research</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${filtered.map(r => `
-          <tr>
-            <td>
-              <div style="font-weight:700; color:var(--text);">${r.symbol}</div>
-              <div style="font-size:0.6rem; color:var(--muted);">${r.company}</div>
-            </td>
-            <td style="font-weight:600;">₹${r.cmp.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-            <td>
-              <span style="color:${r.diff200 > 0 ? 'var(--accent)' : 'var(--red)'}; font-weight:700;">
-                ${r.diff200 > 0 ? '+' : ''}${r.diff200.toFixed(2)}%
-              </span>
-            </td>
-            <td><span class="badge ${r.car.includes('BUY')?'BUY':(r.car.includes('SHORT')?'SHORT':'HOLD')}">${r.car}</span></td>
-            <td>
-              <div style="display:flex; gap:8px;">
-                <a href="https://www.tradingview.com/chart/?symbol=NSE:${r.symbol}" target="_blank" class="tv-link">TradingView</a>
-                <a href="https://www.nseindia.com/get-quotes/equity?symbol=${r.symbol}" target="_blank" class="tv-link" style="border-color:var(--border); color:var(--muted);">NSE</a>
-              </div>
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
-}
-
-function getArrow(col) {
-  if (sortCol !== col) return '<span style="opacity:0.3; font-size:0.6rem;">↕</span>';
-  return sortDir === 1 ? '↑' : '↓';
-}
-
-function setSort(col) {
-  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
-  renderTable();
-}
-
-function setFilter(f, el) {
-  activeFilter = f;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  renderTable();
-}
-
-function showToast(m) {
-  const t = document.getElementById('toast'); 
-  t.textContent = m; 
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-function exportCSV() {
-  const headers = "Symbol,Company,CMP,Diff 200 DMA,Signal\n";
-  const rows = allData.map(r => `${r.symbol},"${r.company.replace(/"/g,'')}",${r.cmp},${r.diff200},${r.car}`).join("\n");
-  const blob = new Blob([headers + rows], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a'); 
-  a.href = url; 
-  a.download = `DMA_Screener_${new Date().toISOString().slice(0,10)}.csv`; 
-  a.click();
-}
-
-document.addEventListener('DOMContentLoaded', loadData);
-</script>
-</body>
-</html>
-
-```
+          <th onclick="setSort('car')">CAR Rating ${getArrow('car')}</th>
+  
