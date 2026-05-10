@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DMA Stock Screener | NSE Live Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #07090f;
+    --surface: #0e1117;
+    --surface2: #161b27;
+    --border: #1f2937;
+    --accent: #00e5a0;
+    --accent2: #0ea5e9;
+    --red: #f43f5e;
+    --gold: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID NOISE BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(7,9,15,.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+    gap: 16px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none;
+  }
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .logo-text span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .4; transform: scale(0.8); }
+  }
+  #last-updated {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  /* ── LAYOUT ── */
+  main {
+    position: relative; z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* ── HERO TITLE ── */
+  .hero {
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--text);
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .hero p {
+    margin-top: 6px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ── STAT CARDS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 10px 10px 0 0;
+  }
+  .stat-card.total::after { background: var(--accent2); }
+  .stat-card.buy::after   { background: var(--accent); }
+  .stat-card.hold::after  { background: var(--gold); }
+  .stat-card.short::after { background: var(--red); }
+  .stat-card.na::after    { background: var(--muted); }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-card.total .stat-value { color: var(--accent2); }
+  .stat-card.buy .stat-value   { color: var(--accent); }
+  .stat-card.hold .stat-value  { color: var(--gold); }
+  .stat-card.short .stat-value { color: var(--red); }
+  .stat-card.na .stat-value    { color: var(--muted); }
+
+  /* ── CONTROLS BAR ── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+  input[type="search"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 8px 10px 8px 34px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input[type="search"]:focus { border-color: var(--accent); }
+  input[type="search"]::placeholder { color: var(--muted); }
+
+  .filter-tabs {
+    display: flex; gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .filter-tab {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .filter-tab:hover { color: var(--text); }
+  .filter-tab.active {
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+  .filter-tab.active.buy   { background: var(--accent); }
+  .filter-tab.active.hold  { background: var(--gold); }
+  .filter-tab.active.short { background: var(--red); }
+  .filter-tab.active.na    { background: var(--muted); color: var(--bg); }
+
+  .btn {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+  .btn.primary:hover { opacity: .85; }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header-row {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .showing-label {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .showing-label strong { color: var(--accent); }
+
+  .sort-info {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th {
+    background: var(--surface2);
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    padding: 10px 14px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color .15s;
+    border-bottom: 1px solid var(--border);
+  }
+  thead th:hover { color: var(--accent); }
+  thead th .sort-arrow { margin-left: 4px; opacity: .4; }
+  thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(31,41,55,.6);
+    transition: background .1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(0,229,160,.04); }
+
+  td {
+    padding: 11px 14px;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .td-symbol {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.8rem;
+    letter-spacing: -0.02em;
+  }
+  .td-company {
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 2px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .td-cmp { color: var(--text); }
+
+  .td-diff {
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    display: inline-block;
+  }
+  .td-diff.pos { background: rgba(0,229,160,.12); color: var(--accent); }
+  .td-diff.neg { background: rgba(244,63,94,.12);  color: var(--red); }
+  .td-diff.neu { background: rgba(100,116,139,.12); color: var(--muted); }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .badge.BUY   { background: rgba(0,229,160,.12); color: var(--accent);  border: 1px solid rgba(0,229,160,.25); }
+  .badge.BUY::before { background: var(--accent); }
+  .badge.HOLD  { background: rgba(245,158,11,.1);  color: var(--gold);   border: 1px solid rgba(245,158,11,.25);}
+  .badge.HOLD::before { background: var(--gold); }
+  .badge.SHORT { background: rgba(244,63,94,.1);   color: var(--red);    border: 1px solid rgba(244,63,94,.25); }
+  .badge.SHORT::before { background: var(--red); }
+  .badge.NA, .badge.DEFAULT { background: rgba(100,116,139,.1); color: var(--muted); border: 1px solid rgba(100,116,139,.2); }
+  .badge.NA::before, .badge.DEFAULT::before { background: var(--muted); }
+
+  .nse-link {
+    display: inline-flex; align-items: center;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-decoration: none;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all .15s;
+  }
+  .nse-link:hover { border-color: var(--border); color: var(--accent); }
+
+  /* ── EMPTY / LOADING ── */
+  .state-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 12px;
+  }
+  .state-center svg { color: var(--muted); opacity: .4; }
+  .state-center p {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── MINI SPARKBAR ── */
+  .dma-bar-wrap {
+    width: 80px;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+    position: relative;
+  }
+  .dma-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .4s ease;
+  }
+
+  /* ── DISCLAIMER ── */
+  .disclaimer {
+    margin-top: 32px;
+    padding: 14px 18px;
+    background: rgba(244,63,94,.05);
+    border: 1px solid rgba(244,63,94,.15);
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .disclaimer strong { color: var(--red); }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: 20px;
+    padding: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all .3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    header { padding: 0 12px; }
+    main { padding: 16px 10px 60px; }
+    .filter-tabs { flex-wrap: wrap; }
+    td, th { padding: 8px 10px; }
+    .td-company { display: none; }
+    .dma-bar-wrap { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <polyline points="1,12 5,6 9,9 13,3" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="logo-text">DMA<em>Screener</em></span>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">
+      <div class="live-dot"></div> Live NSE
+    </div>
+    <div id="last-updated">—</div>
+    <button class="btn primary" id="refresh-btn" onclick="loadData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+  <div class="hero">
+    <h1>200-DMA <em>Stock</em> Screener</h1>
+    <p>NSE Stocks • 200 DMA + CAR Rating • Mahesh Chander Kaushik (INH 100000908)</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-label">Total Stocks</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card buy">
+      <div class="stat-label">Buy</div>
+      <div class="stat-value" id="stat-buy">—</div>
+    </div>
+    <div class="stat-card hold">
+      <div class="stat-label">Hold</div>
+      <div class="stat-value" id="stat-hold">—</div>
+    </div>
+    <div class="stat-card short">
+      <div class="stat-label">Short</div>
+      <div class="stat-value" id="stat-short">—</div>
+    </div>
+    <div class="stat-card na">
+      <div class="stat-label">N/A</div>
+      <div class="stat-value" id="stat-na">—</div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="search" id="search-box" placeholder="Search symbol…" oninput="renderTable()"/>
+    </div>
+
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="filter-tab active" data-filter="ALL" onclick="setFilter('ALL', this)">All</button>
+      <button class="filter-tab buy"   data-filter="BUY"  onclick="setFilter('BUY', this)">Buy</button>
+      <button class="filter-tab hold"  data-filter="HOLD" onclick="setFilter('HOLD', this)">Hold</button>
+      <button class="filter-tab short" data-filter="SHORT" onclick="setFilter('SHORT', this)">Short</button>
+      <button class="filter-tab na"    data-filter="NA"   onclick="setFilter('NA', this)">N/A</button>
+    </div>
+
+    <button class="btn" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export CSV
+    </button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-header-row">
+      <div class="showing-label">Showing <strong id="showing-count">0</strong> stocks</div>
+      <div class="sort-info" id="sort-info">Click column headers to sort</div>
+    </div>
+
+    <div id="table-container">
+      <div class="state-center">
+        <div class="spinner"></div>
+        <p>Loading data from Google Sheets…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="disclaimer">
+    <strong>⚠ Educational Purpose Only:</strong> This is not investment advice. Data sourced from Google Sheets. 
+    Verify all information on <a href="https://www.nseindia.com" target="_blank" style="color:var(--muted)">NSE India</a> before trading. 
+    SEBI Reg. Analyst: Mahesh Chander Kaushik (INH 100000908).
+    Past performance is not indicative of future results. Invest at your own risk.
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>DMAScreener © 2025 • Data via Google Sheets</div>
+    <div style="display:flex;gap:16px">
+      <a href="https://www.nseindia.com" target="_blank">NSE India</a>
+      <a href="https://www.bseindia.com" target="_blank">BSE India</a>
+      <a href="https://www.sebi.gov.in" target="_blank">SEBI</a>
+    </div>
+  </footer>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const SHEET_ID = '1FIjImSXGQjde2Zq3KZNTnlRPuvREHAfkxojXhFOX56Q';
+const CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+// Also try gviz (JSON) as fallback
+const GVZ_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+let allData   = [];
+let filtered  = [];
+let sortCol   = null;
+let sortDir   = 1;   // 1=asc -1=desc
+let activeFilter = 'ALL';
+
+// ── BOOT ──
+document.addEventListener('DOMContentLoaded', loadData);
+
+async function loadData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  showLoading();
+
+  try {
+    await tryGViz();
+  } catch(e1) {
+    try {
+      await tryCSV();
+    } catch(e2) {
+      showError(`Could not load sheet data.<br>Make sure the Google Sheet is publicly shared.<br><small style="color:var(--muted)">${e2.message}</small>`);
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh`;
+}
+
+// ── FETCH via Google Visualization API (JSON) ──
+async function tryGViz() {
+  const res = await fetch(GVZ_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const txt = await res.text();
+  // Strip google's JS wrapper
+  const json = JSON.parse(txt.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
+  const cols  = json.table.cols;
+  const rows  = json.table.rows;
+
+  if (!cols.length || !rows.length) throw new Error('Empty sheet');
+
+  // Map column labels
+  const headers = cols.map(c => (c.label || '').trim().toUpperCase());
+
+  allData = rows.map(row => {
+    const cells = row.c || [];
+    const get = i => (cells[i] && cells[i].v != null) ? String(cells[i].v).trim() : '';
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = get(i));
+    return obj;
+  }).filter(r => Object.values(r).some(v => v !== ''));
+
+  processData(headers);
+}
+
+// ── FETCH via CSV ──
+async function tryCSV() {
+  const res = await fetch(CSV_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) throw new Error('No data rows');
+
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toUpperCase());
+  allData = lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i] || '').trim());
+    return obj;
+  }).filter(r => Object.values(r).some(v => v !== ''));
+
+  processData(headers);
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── COLUMN SNIFFER ──
+// Tries to find the right columns regardless of exact header name
+function sniffCol(headers, ...candidates) {
+  for (const c of candidates) {
+    const found = headers.find(h => h.includes(c.toUpperCase()));
+    if (found) return found;
+  }
+  return null;
+}
+
+function processData(headers) {
+  // Sniff column names flexibly
+  const COL = {
+    symbol : sniffCol(headers, 'NSE', 'SYMBOL', 'STOCK', 'SCRIP', 'CODE', 'NAME'),
+    cmp    : sniffCol(headers, 'CMP', 'PRICE', 'CLOSE', 'LTP', 'LAST'),
+    dma    : sniffCol(headers, 'DMA', 'DIFF', '200', 'DISTANCE'),
+    car    : sniffCol(headers, 'CAR', 'RATING', 'ACTION', 'SIGNAL', 'RECOMMENDATION', 'REC'),
+    company: sniffCol(headers, 'COMPANY', 'FULL', 'DESC'),
+  };
+
+  // Normalise rows
+  allData = allData.map(row => ({
+    symbol  : row[COL.symbol]  || '—',
+    cmp     : toNum(row[COL.cmp]),
+    diff200 : toNum(row[COL.dma]),
+    car     : normCAR(row[COL.car]),
+    company : row[COL.company] || '',
+    raw     : row,
+  })).filter(r => r.symbol !== '—' && r.symbol !== '');
+
+  updateStats();
+  applyFilter();
+  updateTimestamp();
+}
+
+function toNum(s) {
+  if (!s) return NaN;
+  return parseFloat(String(s).replace(/[^0-9.\-]/g, '')) || NaN;
+}
+
+function normCAR(s) {
+  if (!s) return 'NA';
+  const u = s.toUpperCase().trim();
+  if (u.includes('BUY'))   return 'BUY';
+  if (u.includes('HOLD'))  return 'HOLD';
+  if (u.includes('SHORT') || u.includes('SELL') || u.includes('AVOID')) return 'SHORT';
+  return 'NA';
+}
+
+// ── STATS ──
+function updateStats() {
+  const cnt = allData.reduce((a, r) => {
+    a.total++; a[r.car] = (a[r.car]||0)+1; return a;
+  }, {total:0, BUY:0, HOLD:0, SHORT:0, NA:0});
+
+  document.getElementById('stat-total').textContent = cnt.total;
+  document.getElementById('stat-buy').textContent   = cnt.BUY;
+  document.getElementById('stat-hold').textContent  = cnt.HOLD;
+  document.getElementById('stat-short').textContent = cnt.SHORT;
+  document.getElementById('stat-na').textContent    = cnt.NA;
+}
+
+// ── FILTER ──
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function applyFilter() { renderTable(); }
+
+// ── SORT ──
+function setSort(col) {
+  if (sortCol === col) sortDir = -sortDir;
+  else { sortCol = col; sortDir = 1; }
+  renderTable();
+}
+
+// ── RENDER ──
+function renderTable() {
+  const q = document.getElementById('search-box').value.trim().toLowerCase();
+
+  filtered = allData.filter(r => {
+    if (activeFilter !== 'ALL' && r.car !== activeFilter) return false;
+    if (q && !r.symbol.toLowerCase().includes(q) && !r.company.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  if (sortCol) {
+    filtered.sort((a, b) => {
+      let av = a[sortCol], bv = b[sortCol];
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
+      return String(av).localeCompare(String(bv)) * sortDir;
+    });
+  }
+
+  document.getElementById('showing-count').textContent = filtered.length;
+
+  if (!filtered.length) {
+    document.getElementById('table-container').innerHTML = `
+      <div class="state-center">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p>No stocks match your filters</p>
+      </div>`;
+    return;
+  }
+
+  const arrowFor = col => {
+    if (sortCol !== col) return '<span class="sort-arrow">↕</span>';
+    return `<span class="sort-arrow">${sortDir === 1 ? '↑' : '↓'}</span>`;
+  };
+
+  const rows = filtered.map(r => {
+    const diffNum  = r.diff200;
+    const diffStr  = isNaN(diffNum) ? '—' : (diffNum > 0 ? '+' : '') + diffNum.toFixed(2) + '%';
+    const diffCls  = isNaN(diffNum) ? 'neu' : diffNum > 0 ? 'pos' : 'neg';
+    const cmpStr   = isNaN(r.cmp)  ? '—' : '₹' + r.cmp.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    // Bar width clamped ±30% → 0–100%
+    const barW = isNaN(diffNum) ? 0 : Math.min(100, Math.max(0, ((diffNum + 30) / 60) * 100));
+    const barColor = diffNum > 0 ? 'var(--accent)' : 'var(--red)';
+
+    return `<tr>
+      <td>
+        <div class="td-symbol">${esc(r.symbol)}</div>
+        ${r.company ? `<div class="td-company">${esc(r.company)}</div>` : ''}
+      </td>
+      <td class="td-cmp">${cmpStr}</td>
+      <td>
+        <span class="td-diff ${diffCls}">${diffStr}</span>
+        <div class="dma-bar-wrap"><div class="dma-bar-fill" style="width:${barW}%;background:${barColor}"></div></div>
+      </td>
+      <td><span class="badge ${r.car}">${r.car}</span></td>
+      <td>
+        <a class="nse-link" href="https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(r.symbol)}" target="_blank" rel="noopener">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          NSE
+        </a>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('table-container').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th onclick="setSort('symbol')">NSE Code ${arrowFor('symbol')}</th>
+          <th onclick="setSort('cmp')">CMP (₹) ${arrowFor('cmp')}</th>
+          <th onclick="setSort('diff200')">Diff 200 DMA ${arrowFor('diff200')}</th>
+          <th onclick="setSort('car')">CAR Rating ${arrowFor('car')}</th>
+          <th>Link</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  const sorted = sortCol ? `Sorted by ${sortCol} ${sortDir === 1 ? '↑' : '↓'}` : 'Click column headers to sort';
+  document.getElementById('sort-info').textContent = sorted;
+}
+
+// ── UTILITIES ──
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showLoading() {
+  document.getElementById('table-container').innerHTML = `
+    <div class="state-center">
+      <div class="spinner"></div>
+      <p>Fetching live data from Google Sheets…</p>
+    </div>`;
+  document.getElementById('showing-count').textContent = '0';
+}
+
+function showError(msg) {
+  document.getElementById('table-container').innerHTML = `
+    <div class="state-center">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <p>${msg}</p>
+      <button class="btn primary" onclick="loadData()" style="margin-top:8px">Retry</button>
+    </div>`;
+}
+
+function updateTimestamp() {
+  const now = new Date();
+  document.getElementById('last-updated').textContent =
+    'Updated ' + now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── EXPORT CSV ──
+function exportCSV() {
+  if (!filtered.length) { showToast('No data to export'); return; }
+  const hdr = ['Symbol','CMP','Diff 200 DMA (%)','CAR Rating'];
+  const rows = filtered.map(r => [
+    r.symbol,
+    isNaN(r.cmp)     ? '' : r.cmp,
+    isNaN(r.diff200) ? '' : r.diff200,
+    r.car,
+  ]);
+  const csv = [hdr, ...rows].map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `dma_screener_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('CSV exported ✓');
+}
+
+// Auto-refresh every 5 minutes
+setInterval(loadData, 5 * 60 * 1000);
+</script>
+</body>
+</html>
